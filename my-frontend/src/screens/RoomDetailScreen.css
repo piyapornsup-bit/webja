@@ -1,0 +1,68 @@
+.roomdetail-container {
+    max-width: 650px;
+    margin: 50px auto;
+    background: #ffffff;
+    padding: 36px;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.roomdetail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.roomdetail-header h2 {
+    margin: 0;
+    font-size: 26px;
+    color: #0f172a;
+}
+
+.roomdetail-price {
+    color: #2563eb;
+    font-size: 26px;
+    font-weight: 800;
+}
+
+.roomdetail-divider {
+    margin: 24px 0;
+    border: 0;
+    border-top: 1px solid #f1f5f9;
+}
+
+.roomdetail-info {
+    font-size: 15px;
+    color: #334155;
+    line-height: 1.8;
+}
+
+.roomdetail-actions {
+    margin-top: 36px;
+    display: flex;
+    gap: 16px;
+}
+
+.btn-back {
+    padding: 12px 24px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #475569;
+    font-weight: 600;
+}
+
+.btn-book-now {
+    padding: 12px 28px;
+    background: #2563eb;
+    color: #ffffff;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.btn-book-now:hover {
+    background: #1d4ed8;
+}

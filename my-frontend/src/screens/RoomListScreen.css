@@ -1,0 +1,129 @@
+.roomlist-container {
+    max-width: 1040px;
+    margin: 40px auto;
+    padding: 0 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.roomlist-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 24px;
+}
+
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    background: #ffffff;
+    padding: 18px;
+    border-radius: 12px;
+    margin-bottom: 28px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.filter-bar select {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    font-size: 14px;
+    outline: none;
+}
+
+.btn-filter {
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    padding: 10px 22px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.btn-filter:hover {
+    background: #1d4ed8;
+}
+
+.rooms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 24px;
+}
+
+.room-card {
+    background: #ffffff;
+    padding: 22px;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.room-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.room-card-header h3 {
+    margin: 0;
+    font-size: 20px;
+    color: #0f172a;
+}
+
+.badge-available {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: #dcfce7;
+    color: #15803d;
+    font-weight: 700;
+}
+
+.badge-reserved {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: #fef3c7;
+    color: #b45309;
+    font-weight: 700;
+}
+
+.room-subtitle {
+    color: #64748b;
+    font-size: 13px;
+    margin: 6px 0 14px;
+}
+
+.room-desc {
+    font-size: 14px;
+    color: #475569;
+    line-height: 1.5;
+}
+
+.room-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding-top: 14px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.room-price {
+    color: #2563eb;
+    font-size: 20px;
+    font-weight: 800;
+}
+
+.room-link-detail {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+}

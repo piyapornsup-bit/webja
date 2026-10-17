@@ -1,11 +1,18 @@
-// db.js
-const mysql = require("mysql2");
+const mysql = require('mysql2');
 
-const pool = mysql.createPool({
-  host: "localhost",
-  user: "root",
-  password: "",
-  database: "library_system",
+const connection = mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: '', // ใส่รหัสผ่านของ MySQL เครื่องคุณ (ถ้าไม่มีให้เว้นว่างไว้แบบนี้)
+    database: 'dorm_db'
 });
 
-module.exports = pool.promise();
+connection.connect((err) => {
+    if (err) {
+        console.error('❌ เชื่อมต่อ MySQL ไม่สำเร็จ:', err.message);
+        return;
+    }
+    console.log('✅ เชื่อมต่อฐานข้อมูล dorm_db สำเร็จแล้ว');
+});
+
+module.exports = connection;

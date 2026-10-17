@@ -1,0 +1,57 @@
+.roomform-container {
+    max-width: 520px;
+    margin: 50px auto;
+    background: #ffffff;
+    padding: 36px;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.04);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.roomform-title {
+    font-size: 24px;
+    color: #0f172a;
+    margin-top: 0;
+    margin-bottom: 24px;
+}
+
+.roomform-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 16px;
+}
+
+.roomform-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 6px;
+}
+
+.roomform-group input, 
+.roomform-group select, 
+.roomform-group textarea {
+    padding: 10px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+}
+
+.btn-save-room {
+    background: #2563eb;
+    color: #ffffff;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 15px;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.btn-save-room:hover {
+    background: #1d4ed8;
+}

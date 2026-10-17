@@ -1,25 +1,93 @@
-// index.js
-const express = require("express");
+const express = require('express');
+const cors = require('cors');
+const db = require('./db');
+
 const app = express();
-const cors = require("cors")
 const PORT = 3000;
-const db = require("./db");
+
 app.use(cors());
+app.use(express.json());
 
+// 1. READ ALL & FILTER
+app.get('/api/rooms', (req, res) => {
+    const { room_type, floor, status } = req.query;
+    let sql = 'SELECT * FROM rooms WHERE 1=1';
+    const params = [];
 
-app.get("/", (req, res) => {
-    res.send("สวัสดีค่ะ Server ทำงานแล้ว!");
+    if (room_type) {
+        sql += ' AND room_type = ?';
+        params.push(room_type);
+    }
+    if (floor) {
+        sql += ' AND floor = ?';
+        params.push(floor);
+    }
+    if (status) {
+        sql += ' AND status = ?';
+        params.push(status);
+    }
+
+    sql += ' ORDER BY room_number ASC';
+
+    db.query(sql, params, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+// 2. READ ONE
+app.get('/api/rooms/:id', (req, res) => {
+    const { id } = req.params;
+    db.query('SELECT * FROM rooms WHERE id = ?', [id], (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (results.length === 0) return res.status(404).json({ message: 'ไม่พบห้องพัก' });
+        res.json(results[0]);
+    });
+});
+
+// 3. CREATE
+app.post('/api/rooms', (req, res) => {
+    const { room_number, room_type, price, floor, status, details } = req.body;
+    const sql = 'INSERT INTO rooms (room_number, room_type, price, floor, status, details) VALUES (?, ?, ?, ?, ?, ?)';
+    db.query(sql, [room_number, room_type, price, floor, status || 'available', details], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(201).json({ message: 'เพิ่มห้องพักสำเร็จ', id: result.insertId });
+    });
+});
+
+// 4. UPDATE
+app.put('/api/rooms/:id', (req, res) => {
+    const { id } = req.params;
+    const { room_number, room_type, price, floor, status, details } = req.body;
+    const sql = 'UPDATE rooms SET room_number = ?, room_type = ?, price = ?, floor = ?, status = ?, details = ? WHERE id = ?';
+    db.query(sql, [room_number, room_type, price, floor, status, details, id], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'แก้ไขข้อมูลสำเร็จ' });
+    });
+});
+
+// 5. UPDATE STATUS (จองห้อง)
+app.patch('/api/rooms/:id/reserve', (req, res) => {
+    const { id } = req.params;
+    const sql = "UPDATE rooms SET status = 'reserved' WHERE id = ? AND status = 'available'";
+    db.query(sql, [id], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (result.affectedRows === 0) {
+            return res.status(400).json({ message: 'ห้องพักไม่พร้อมให้จอง' });
+        }
+        res.json({ message: 'จองห้องสำเร็จ' });
+    });
+});
+
+// 6. DELETE
+app.delete('/api/rooms/:id', (req, res) => {
+    const { id } = req.params;
+    db.query('DELETE FROM rooms WHERE id = ?', [id], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'ลบห้องพักสำเร็จ' });
+    });
 });
 
 app.listen(PORT, () => {
-    console.log(`Server กำลังทำงานที่ http://localhost:${PORT}`);
+    console.log(`Server API is running on http://localhost:${PORT}`);
 });
-
-app.get("/api/books",async (req, res)=> {
-    try {
-        const [rows] = await db.query("SELECT * FROM books");
-        res.json(rows);
-    }catch (err){
-        res.status(500).json({ error: err.message});
-    }
-})
