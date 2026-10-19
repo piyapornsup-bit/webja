@@ -63,3 +63,26 @@
     cursor: pointer;
     font-weight: 700;
 }
+/* บังคับข้อความแจ้งเตือน Toast ให้เป็นสีขาวสว่างเด่นชัด */
+.custom-toast-notification {
+    position: fixed !important;
+    top: 85px !important;
+    right: 25px !important;
+    background-color: #15803d !important;
+    padding: 14px 22px !important;
+    border-radius: 10px !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    z-index: 999999 !important;
+    border: 1px solid #16a34a !important;
+}
+
+.custom-toast-notification span,
+.custom-toast-text {
+    color: #ffffff !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+}

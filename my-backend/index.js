@@ -14,15 +14,16 @@ app.get('/api/rooms', (req, res) => {
     let sql = 'SELECT * FROM rooms WHERE 1=1';
     const params = [];
 
-    if (room_type) {
+    // กรองเฉพาะเมื่อมีค่าจริงและไม่ใช่สตริงว่าง
+    if (room_type && room_type.trim() !== '') {
         sql += ' AND room_type = ?';
         params.push(room_type);
     }
-    if (floor) {
+    if (floor && floor.toString().trim() !== '') {
         sql += ' AND floor = ?';
         params.push(floor);
     }
-    if (status) {
+    if (status && status.trim() !== '') {
         sql += ' AND status = ?';
         params.push(status);
     }
@@ -30,7 +31,10 @@ app.get('/api/rooms', (req, res) => {
     sql += ' ORDER BY room_number ASC';
 
     db.query(sql, params, (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
+        if (err) {
+            console.error('Database query error:', err);
+            return res.status(500).json({ error: err.message });
+        }
         res.json(results);
     });
 });
@@ -47,9 +51,19 @@ app.get('/api/rooms/:id', (req, res) => {
 
 // 3. CREATE
 app.post('/api/rooms', (req, res) => {
-    const { room_number, room_type, price, floor, status, details, tenant_name, tenant_phone } = req.body;
-    const sql = 'INSERT INTO rooms (room_number, room_type, price, floor, status, details, tenant_name, tenant_phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
-    db.query(sql, [room_number, room_type, price, floor, status || 'available', details, tenant_name || null, tenant_phone || null], (err, result) => {
+    const { room_number, room_type, price, floor, status, details, tenant_name, tenant_phone, image_url } = req.body;
+    const sql = 'INSERT INTO rooms (room_number, room_type, price, floor, status, details, tenant_name, tenant_phone, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    db.query(sql, [
+        room_number, 
+        room_type, 
+        price, 
+        floor, 
+        status || 'available', 
+        details, 
+        tenant_name || null, 
+        tenant_phone || null,
+        image_url || null
+    ], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
         res.status(201).json({ message: 'เพิ่มห้องพักสำเร็จ', id: result.insertId });
     });
@@ -58,10 +72,36 @@ app.post('/api/rooms', (req, res) => {
 // 4. UPDATE
 app.put('/api/rooms/:id', (req, res) => {
     const { id } = req.params;
-    const { room_number, room_type, price, floor, status, details, tenant_name, tenant_phone } = req.body;
-    const sql = 'UPDATE rooms SET room_number = ?, room_type = ?, price = ?, floor = ?, status = ?, details = ?, tenant_name = ?, tenant_phone = ? WHERE id = ?';
-    db.query(sql, [room_number, room_type, price, floor, status, details, tenant_name || null, tenant_phone || null, id], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
+    const { room_number, room_type, price, floor, status, details, tenant_name, tenant_phone, image_url } = req.body;
+    
+    const sql = `UPDATE rooms SET 
+        room_number = ?, 
+        room_type = ?, 
+        price = ?, 
+        floor = ?, 
+        status = ?, 
+        details = ?, 
+        tenant_name = ?, 
+        tenant_phone = ?, 
+        image_url = ? 
+        WHERE id = ?`;
+
+    db.query(sql, [
+        room_number, 
+        room_type, 
+        price, 
+        floor, 
+        status, 
+        details, 
+        tenant_name || null, 
+        tenant_phone || null, 
+        image_url || null, 
+        id
+    ], (err, result) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ error: err.message });
+        }
         res.json({ message: 'แก้ไขข้อมูลสำเร็จ' });
     });
 });
@@ -70,11 +110,13 @@ app.put('/api/rooms/:id', (req, res) => {
 app.patch('/api/rooms/:id/reserve', (req, res) => {
     const { id } = req.params;
     const { tenant_name, tenant_phone } = req.body;
+    
     const sql = "UPDATE rooms SET status = 'reserved', tenant_name = ?, tenant_phone = ? WHERE id = ? AND status = 'available'";
+    
     db.query(sql, [tenant_name || null, tenant_phone || null, id], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
         if (result.affectedRows === 0) {
-            return res.status(400).json({ message: 'ห้องพักไม่พร้อมให้จอง' });
+            return res.status(400).json({ message: 'ห้องพักไม่พร้อมให้จอง หรือถูกจองไปแล้ว' });
         }
         res.json({ message: 'จองห้องสำเร็จ' });
     });
