@@ -1,12 +1,8 @@
-import react, { reactCompilerPreset } from '@vitejs/plugin-react'
-import babel from '@rolldown/plugin-babel'
 import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/webja/',
-  plugins: [
-    react(),
-    babel({ presets: [reactCompilerPreset()] }),
-  ],
+  plugins: [react()],
+  base: '/', // เปลี่ยนเป็น '/' เพื่อให้รันในเครื่อง (localhost) ได้ปกติ
 })

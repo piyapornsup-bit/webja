@@ -8,27 +8,46 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 
-// 1. READ ALL & FILTER
+// 1. READ ALL & FILTER (ดึงข้อมูลห้อง พร้อมรหัสนิสิตล่าสุดสำหรับแสดงใน Admin Dashboard)
 app.get('/api/rooms', (req, res) => {
     const { room_type, floor, status } = req.query;
-    let sql = 'SELECT * FROM rooms WHERE 1=1';
+    let sql = `
+        SELECT 
+            r.*, 
+            (SELECT b.student_id 
+             FROM bookings b 
+             WHERE b.room_id = r.id 
+             ORDER BY b.id DESC LIMIT 1) AS student_id
+        FROM rooms r 
+        WHERE 1=1
+    `;
     const params = [];
 
-    // กรองเฉพาะเมื่อมีค่าจริงและไม่ใช่สตริงว่าง
     if (room_type && room_type.trim() !== '') {
-        sql += ' AND room_type = ?';
+        sql += ' AND r.room_type = ?';
         params.push(room_type);
     }
     if (floor && floor.toString().trim() !== '') {
-        sql += ' AND floor = ?';
+        sql += ' AND r.floor = ?';
         params.push(floor);
     }
     if (status && status.trim() !== '') {
-        sql += ' AND status = ?';
-        params.push(status);
+        // รองรับการกรองทั้งค่าไทยและอังกฤษ
+        if (status === 'available' || status === 'ว่าง') {
+            sql += " AND (r.status = 'ว่าง' OR r.status = 'available')";
+        } else if (status === 'reserved' || status === 'จองแล้ว') {
+            sql += " AND (r.status = 'จองแล้ว' OR r.status = 'reserved')";
+        } else if (status === 'occupied' || status === 'มีผู้เช่า') {
+            sql += " AND (r.status = 'มีผู้เช่า' OR r.status = 'occupied')";
+        } else if (status === 'maintenance' || status === 'ปิดปรับปรุง') {
+            sql += " AND (r.status = 'ปิดปรับปรุง' OR r.status = 'maintenance')";
+        } else {
+            sql += ' AND r.status = ?';
+            params.push(status);
+        }
     }
 
-    sql += ' ORDER BY room_number ASC';
+    sql += ' ORDER BY r.room_number ASC';
 
     db.query(sql, params, (err, results) => {
         if (err) {
@@ -39,10 +58,21 @@ app.get('/api/rooms', (req, res) => {
     });
 });
 
-// 2. READ ONE
+// 2. READ ONE (ดึงข้อมูลห้อง พร้อมรหัสนิสิตจาก bookings)
 app.get('/api/rooms/:id', (req, res) => {
     const { id } = req.params;
-    db.query('SELECT * FROM rooms WHERE id = ?', [id], (err, results) => {
+    const sql = `
+        SELECT 
+            r.*, 
+            (SELECT b.student_id 
+             FROM bookings b 
+             WHERE b.room_id = r.id 
+             ORDER BY b.id DESC LIMIT 1) AS student_id
+        FROM rooms r 
+        WHERE r.id = ?
+    `;
+
+    db.query(sql, [id], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
         if (results.length === 0) return res.status(404).json({ message: 'ไม่พบห้องพัก' });
         res.json(results[0]);
@@ -58,7 +88,7 @@ app.post('/api/rooms', (req, res) => {
         room_type, 
         price, 
         floor, 
-        status || 'available', 
+        status || 'ว่าง', 
         details, 
         tenant_name || null, 
         tenant_phone || null,
@@ -72,7 +102,7 @@ app.post('/api/rooms', (req, res) => {
 // 4. UPDATE
 app.put('/api/rooms/:id', (req, res) => {
     const { id } = req.params;
-    const { room_number, room_type, price, floor, status, details, tenant_name, tenant_phone, image_url } = req.body;
+    const { room_number, room_type, price, floor, status, details, tenant_name, tenant_phone, image_url, student_id } = req.body;
     
     const sql = `UPDATE rooms SET 
         room_number = ?, 
@@ -102,32 +132,79 @@ app.put('/api/rooms/:id', (req, res) => {
             console.error(err);
             return res.status(500).json({ error: err.message });
         }
+
+        // จัดการตาราง bookings ให้ซิงก์กัน (เช็กทั้งสถานะ "ว่าง" และ "available")
+        const isNotAvailable = status !== 'ว่าง' && status !== 'available';
+        if (tenant_name && tenant_name.trim() !== '' && isNotAvailable) {
+            // กรณีมีชื่อผู้เช่า/ผู้จอง: เช็กว่ามีใน bookings หรือยัง
+            const checkSql = 'SELECT id FROM bookings WHERE room_id = ? ORDER BY id DESC LIMIT 1';
+            db.query(checkSql, [id], (errCheck, rows) => {
+                if (errCheck) return console.error('Check error:', errCheck);
+
+                if (rows.length > 0) {
+                    // อัปเดตข้อมูลเดิม
+                    const updateBookingSql = `
+                        UPDATE bookings 
+                        SET student_name = ?, student_id = ?, phone = ? 
+                        WHERE id = ?
+                    `;
+                    db.query(updateBookingSql, [tenant_name, student_id || '-', tenant_phone || '-', rows[0].id]);
+                } else {
+                    // เพิ่มรายการใหม่
+                    const insertBookingSql = `
+                        INSERT INTO bookings (room_id, student_name, student_id, phone, booking_status) 
+                        VALUES (?, ?, ?, ?, 'confirmed')
+                    `;
+                    db.query(insertBookingSql, [id, tenant_name, student_id || '-', tenant_phone || '-']);
+                }
+            });
+        } else {
+            // กรณีลบชื่อออก หรือเปลี่ยนสถานะกลับเป็นห้องว่าง: ลบรายการใน bookings ของห้องนี้ออก
+            const deleteBookingSql = 'DELETE FROM bookings WHERE room_id = ?';
+            db.query(deleteBookingSql, [id], (errDelete) => {
+                if (errDelete) console.error('Delete booking error:', errDelete);
+            });
+        }
+
         res.json({ message: 'แก้ไขข้อมูลสำเร็จ' });
     });
 });
 
-// 5. UPDATE STATUS (จองห้อง)
+// 5. RESERVE ROOM (จองห้องพักจากฝั่งนิสิต)
 app.patch('/api/rooms/:id/reserve', (req, res) => {
     const { id } = req.params;
-    const { tenant_name, tenant_phone } = req.body;
-    
-    const sql = "UPDATE rooms SET status = 'reserved', tenant_name = ?, tenant_phone = ? WHERE id = ? AND status = 'available'";
-    
-    db.query(sql, [tenant_name || null, tenant_phone || null, id], (err, result) => {
+    const { tenant_name, tenant_phone, student_id } = req.body;
+
+    // บันทึกสถานะห้องเป็น 'จองแล้ว' เมื่อห้องเดิมมีสถานะเป็น 'ว่าง' หรือ 'available'
+    const updateRoomSql = "UPDATE rooms SET status = 'จองแล้ว', tenant_name = ?, tenant_phone = ? WHERE id = ? AND (status = 'ว่าง' OR status = 'available')";
+
+    db.query(updateRoomSql, [tenant_name || null, tenant_phone || null, id], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
         if (result.affectedRows === 0) {
             return res.status(400).json({ message: 'ห้องพักไม่พร้อมให้จอง หรือถูกจองไปแล้ว' });
         }
-        res.json({ message: 'จองห้องสำเร็จ' });
+
+        const insertBookingSql = `
+            INSERT INTO bookings (room_id, student_name, student_id, phone, booking_status) 
+            VALUES (?, ?, ?, ?, 'confirmed')
+        `;
+        db.query(insertBookingSql, [id, tenant_name, student_id || '-', tenant_phone || '-'], (errBooking) => {
+            if (errBooking) console.error('Booking sync error:', errBooking);
+        });
+
+        res.json({ message: 'จองห้องพักสำเร็จ' });
     });
 });
 
 // 6. DELETE
 app.delete('/api/rooms/:id', (req, res) => {
     const { id } = req.params;
-    db.query('DELETE FROM rooms WHERE id = ?', [id], (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: 'ลบห้องพักสำเร็จ' });
+    // ลบรายการใน bookings ก่อนเพื่อความสะอาด
+    db.query('DELETE FROM bookings WHERE room_id = ?', [id], () => {
+        db.query('DELETE FROM rooms WHERE id = ?', [id], (err, result) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: 'ลบห้องพักสำเร็จ' });
+        });
     });
 });
 

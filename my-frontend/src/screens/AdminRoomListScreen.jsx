@@ -6,6 +6,7 @@ import './AdminRoomListScreen.css';
 export default function AdminRoomListScreen() {
     const [rooms, setRooms] = useState([]);
     const [toastMessage, setToastMessage] = useState('');
+    const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null, roomNumber: '' });
     const location = useLocation();
 
     const fetchAll = async () => {
@@ -15,10 +16,8 @@ export default function AdminRoomListScreen() {
 
     useEffect(() => {
         fetchAll();
-        // ตรวจสอบว่ามีข้อความสำเร็จส่งข้ามหน้ามาหรือไม่
         if (location.state && location.state.successMessage) {
             setToastMessage(location.state.successMessage);
-            // แสดง 3.5 วินาทีแล้วค่อย ๆ ซ่อน
             const timer = setTimeout(() => {
                 setToastMessage('');
             }, 3500);
@@ -26,17 +25,113 @@ export default function AdminRoomListScreen() {
         }
     }, [location.state]);
 
-    const handleDelete = async (id, roomNum) => {
-        if (!window.confirm(`ต้องการลบห้อง ${roomNum} หรือไม่?`)) return;
-        await deleteRoom(id);
-        setToastMessage(`ลบห้องพักหมายเลข ${roomNum} สำเร็จ`);
-        setTimeout(() => setToastMessage(''), 3000);
-        fetchAll();
+    // ฟังก์ชันเปิด Modal ถามยืนยัน
+    const openDeleteModal = (id, roomNum) => {
+        setDeleteModal({ isOpen: true, id, roomNumber: roomNum });
+    };
+
+    // ฟังก์ชันกดยืนยันลบห้องจริงจากใน Modal
+    const handleConfirmDelete = async () => {
+        if (!deleteModal.id) return;
+        try {
+            await deleteRoom(deleteModal.id);
+            setToastMessage(`ลบห้องพักหมายเลข ${deleteModal.roomNumber} สำเร็จ`);
+            setTimeout(() => setToastMessage(''), 3000);
+            setDeleteModal({ isOpen: false, id: null, roomNumber: '' });
+            fetchAll();
+        } catch (error) {
+            console.error('Delete error:', error);
+            alert('เกิดข้อผิดพลาดในการลบห้องพัก');
+        }
     };
 
     return (
         <div style={{ maxWidth: '1100px', margin: '30px auto', padding: '0 16px', fontFamily: 'sans-serif', position: 'relative' }}>
-            {/* กล่อง Toast แจ้งเตือนสไตล์คลีนการ์ดขาวขอบเขียว อ่านออก 100% แน่นอน */}
+            
+            {/* Modal ยืนยันการลบ ลอยเด่นตรงกลางจอ */}
+            {deleteModal.isOpen && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+                    backdropFilter: 'blur(3px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 999999
+                }}>
+                    <div style={{
+                        background: '#ffffff',
+                        padding: '28px',
+                        borderRadius: '16px',
+                        maxWidth: '400px',
+                        width: '90%',
+                        textAlign: 'center',
+                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                        animation: 'fadeIn 0.2s ease-out'
+                    }}>
+                        <div style={{
+                            width: '56px',
+                            height: '56px',
+                            borderRadius: '50%',
+                            backgroundColor: '#fee2e2',
+                            color: '#dc2626',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '26px',
+                            margin: '0 auto 16px'
+                        }}>
+                            🗑️
+                        </div>
+                        <h3 style={{ margin: '0 0 8px 0', fontSize: '19px', color: '#0f172a' }}>
+                            ยืนยันการลบห้องพัก?
+                        </h3>
+                        <p style={{ margin: '0 0 24px 0', fontSize: '14px', color: '#64748b', lineHeight: '1.5' }}>
+                            คุณต้องการลบ <strong>ห้อง {deleteModal.roomNumber}</strong> ออกจากระบบใช่หรือไม่ การดำเนินการนี้ไม่สามารถย้อนกลับได้
+                        </p>
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                            <button
+                                onClick={() => setDeleteModal({ isOpen: false, id: null, roomNumber: '' })}
+                                style={{
+                                    flex: 1,
+                                    padding: '10px 16px',
+                                    borderRadius: '8px',
+                                    border: '1px solid #cbd5e1',
+                                    background: '#ffffff',
+                                    color: '#475569',
+                                    fontWeight: '600',
+                                    fontSize: '14px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                ยกเลิก
+                            </button>
+                            <button
+                                onClick={handleConfirmDelete}
+                                style={{
+                                    flex: 1,
+                                    padding: '10px 16px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: '#dc2626',
+                                    color: '#ffffff',
+                                    fontWeight: 'bold',
+                                    fontSize: '14px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                ยืนยันลบ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* กล่อง Toast แจ้งเตือนสไตล์คลีนการ์ดขาวขอบเขียว ลอยมุมขวาบน */}
             {toastMessage && (
                 <div style={{
                     position: 'fixed',
@@ -53,7 +148,7 @@ export default function AdminRoomListScreen() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '12px',
-                    zIndex: 999999
+                    zIndex: 99999
                 }}>
                     <span style={{ fontSize: '20px' }}>✅</span>
                     <div>
@@ -95,16 +190,30 @@ export default function AdminRoomListScreen() {
                                     borderRadius: '12px', 
                                     fontSize: '12px', 
                                     fontWeight: 'bold',
-                                    background: r.status === 'available' ? '#dcfce7' : (r.status === 'reserved' ? '#fee2e2' : '#fef3c7'),
-                                    color: r.status === 'available' ? '#15803d' : (r.status === 'reserved' ? '#b91c1c' : '#b45309')
+                                    background: 
+                                        (r.status === 'ว่าง' || r.status === 'available') ? '#dcfce7' :
+                                        (r.status === 'จองแล้ว' || r.status === 'reserved') ? '#ffedd5' :
+                                        (r.status === 'มีผู้เช่า' || r.status === 'occupied') ? '#fee2e2' : '#fef3c7',
+                                    color: 
+                                        (r.status === 'ว่าง' || r.status === 'available') ? '#15803d' :
+                                        (r.status === 'จองแล้ว' || r.status === 'reserved') ? '#c2410c' :
+                                        (r.status === 'มีผู้เช่า' || r.status === 'occupied') ? '#b91c1c' : '#b45309'
                                 }}>
-                                    {r.status === 'available' ? '🟢 ว่าง' : (r.status === 'reserved' ? '🔴 มีผู้เช่า' : '🟡 ปิดซ่อม')}
+                                    {(r.status === 'ว่าง' || r.status === 'available') && '🟢 ว่าง'}
+                                    {(r.status === 'จองแล้ว' || r.status === 'reserved') && '🟠 จองแล้ว'}
+                                    {(r.status === 'มีผู้เช่า' || r.status === 'occupied') && '🔴 มีผู้เช่า'}
+                                    {(r.status === 'ปิดปรับปรุง' || r.status === 'maintenance') && '🟡 ปิดซ่อม'}
                                 </span>
                             </td>
                             <td style={{ padding: '12px' }}>
                                 {r.tenant_name ? (
                                     <div>
                                         <strong style={{ color: '#0f172a' }}>👤 {r.tenant_name}</strong>
+                                        {r.student_id && (
+                                            <div style={{ fontSize: '12px', color: '#16a34a', fontWeight: '600' }}>
+                                                🎓 รหัส: {r.student_id}
+                                            </div>
+                                        )}
                                         <div style={{ fontSize: '12px', color: '#64748b' }}>📞 {r.tenant_phone || '-'}</div>
                                     </div>
                                 ) : (
@@ -113,7 +222,12 @@ export default function AdminRoomListScreen() {
                             </td>
                             <td style={{ padding: '12px', textAlign: 'center' }}>
                                 <Link to={`/admin/edit/${r.id}`} style={{ marginRight: '12px', color: '#2563eb', textDecoration: 'none', fontWeight: 'bold' }}>แก้ไข</Link>
-                                <button onClick={() => handleDelete(r.id, r.room_number)} style={{ color: '#dc2626', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}>ลบ</button>
+                                <button 
+                                    onClick={() => openDeleteModal(r.id, r.room_number)} 
+                                    style={{ color: '#dc2626', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+                                >
+                                    ลบ
+                                </button>
                             </td>
                         </tr>
                     ))}

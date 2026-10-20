@@ -20,9 +20,8 @@ export const createRoom = async (data) => {
     return await res.json();
 };
 
-// ฟังก์ชันแก้ไขข้อมูลห้อง
 export const updateRoom = async (id, roomData) => {
-    const response = await fetch(`http://localhost:3000/api/rooms/${id}`, {
+    const response = await fetch(`${BASE_URL}/${id}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
@@ -32,11 +31,19 @@ export const updateRoom = async (id, roomData) => {
     return await response.json();
 };
 
-export const reserveRoom = async (id) => {
-    const res = await fetch(`${BASE_URL}/${id}/reserve`, {
-        method: 'PATCH'
+export const reserveRoom = async (id, bookingData) => {
+    const response = await fetch(`${BASE_URL}/${id}/reserve`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(bookingData)
     });
-    return await res.json();
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message || 'การจองห้องพักล้มเหลว');
+    }
+    return data;
 };
 
 export const deleteRoom = async (id) => {

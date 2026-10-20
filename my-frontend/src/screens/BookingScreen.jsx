@@ -1,42 +1,104 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { reserveRoom } from '../api/roomApi';
-import './BookingScreen.css';
 
 export default function BookingScreen() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const [form, setForm] = useState({ name: '', phone: '', studentId: '' });
 
-    const handleBooking = async (e) => {
+    const [formData, setFormData] = useState({
+        name: '',
+        studentId: '',
+        phone: ''
+    });
+    const [loading, setLoading] = useState(false);
+    const [errorMsg, setErrorMsg] = useState('');
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        const res = await reserveRoom(id);
-        if (res.message) {
-            alert('จองห้องพักสำเร็จแล้ว!');
-            navigate('/rooms');
-        } else {
-            alert(res.error || 'เกิดข้อผิดพลาดในการจอง');
+        setLoading(true);
+        setErrorMsg('');
+
+        try {
+            // ส่งข้อมูลโดยแปลงชื่อ field ให้ตรงกับ Backend
+        await reserveRoom(id, {
+        tenant_name: formData.name,
+        tenant_phone: formData.phone,
+        student_id: formData.studentId // ส่งรหัสนิสิตมาบันทึกลงตาราง bookings ด้วย
+        });
+
+            // จองสำเร็จ นำทางกลับไปหน้ารายการห้องพักพร้อมส่งข้อความแจ้งเตือน
+            navigate('/rooms', { 
+                state: { successMessage: `จองห้องพักสำเร็จเรียบร้อยแล้ว` } 
+            });
+        } catch (err) {
+            console.error('Booking failed:', err);
+            setErrorMsg(err.message || 'ไม่สามารถทำการจองได้ กรุณาลองใหม่อีกครั้ง');
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
-        <div style={{ maxWidth: '480px', margin: '40px auto', background: '#fff', padding: '30px', borderRadius: '12px', border: '1px solid #e2e8f0', fontFamily: 'sans-serif' }}>
-            <h2>แบบฟอร์มยืนยันการจองห้อง</h2>
-            <form onSubmit={handleBooking} style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '20px' }}>
-                <div>
-                    <label style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>ชื่อ-นามสกุล *</label>
-                    <input type="text" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }} />
+        <div style={{ maxWidth: '480px', margin: '40px auto', padding: '30px', background: '#fff', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', fontFamily: 'sans-serif' }}>
+            <h2 style={{ fontSize: '20px', color: '#0f172a', marginBottom: '24px', fontWeight: 'bold' }}>แบบฟอร์มยืนยันการจองห้อง</h2>
+
+            {errorMsg && (
+                <div style={{ background: '#fef2f2', color: '#dc2626', padding: '12px', borderRadius: '8px', marginBottom: '16px', fontSize: '14px', border: '1px solid #fecaca' }}>
+                    ⚠️ {errorMsg}
                 </div>
+            )}
+
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div>
-                    <label style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>รหัสนิสิต *</label>
-                    <input type="text" required value={form.studentId} onChange={e => setForm({...form, studentId: e.target.value})} style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }} />
+                    <label style={{ display: 'block', fontSize: '13px', color: '#475569', marginBottom: '6px' }}>ชื่อ-นามสกุล *</label>
+                    <input 
+                        type="text" 
+                        required 
+                        value={formData.name} 
+                        onChange={e => setFormData({ ...formData, name: e.target.value })}
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box' }}
+                    />
                 </div>
+
                 <div>
-                    <label style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>เบอร์โทรศัพท์ *</label>
-                    <input type="tel" required value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }} />
+                    <label style={{ display: 'block', fontSize: '13px', color: '#475569', marginBottom: '6px' }}>รหัสนิสิต *</label>
+                    <input 
+                        type="text" 
+                        required 
+                        value={formData.studentId} 
+                        onChange={e => setFormData({ ...formData, studentId: e.target.value })}
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box' }}
+                    />
                 </div>
-                <button type="submit" style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '10px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' }}>
-                    ยืนยันการจองห้องพัก
+
+                <div>
+                    <label style={{ display: 'block', fontSize: '13px', color: '#475569', marginBottom: '6px' }}>เบอร์โทรศัพท์ *</label>
+                    <input 
+                        type="text" 
+                        required 
+                        value={formData.phone} 
+                        onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box' }}
+                    />
+                </div>
+
+                <button 
+                    type="submit"
+                    disabled={loading}
+                    style={{
+                        marginTop: '10px',
+                        backgroundColor: '#15803d',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        fontSize: '15px',
+                        fontWeight: 'bold',
+                        cursor: loading ? 'not-allowed' : 'pointer'
+                    }}
+                >
+                    {loading ? 'กำลังบันทึกการจอง...' : 'ยืนยันการจองห้องพัก'}
                 </button>
             </form>
         </div>

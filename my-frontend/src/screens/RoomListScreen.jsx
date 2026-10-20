@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { getRooms } from '../api/roomApi';
 import './RoomListScreen.css';
 
@@ -7,6 +7,8 @@ export default function RoomListScreen() {
     const [rooms, setRooms] = useState([]);
     const [filter, setFilter] = useState({ room_type: '', floor: '', status: '' });
     const [loading, setLoading] = useState(false);
+    const [toastMessage, setToastMessage] = useState('');
+    const location = useLocation();
 
     const loadRooms = async (currentFilter = filter) => {
         setLoading(true);
@@ -21,47 +23,83 @@ export default function RoomListScreen() {
         }
     };
 
-    useEffect(() => { 
-        loadRooms(); 
-    }, []);
+    useEffect(() => {
+        loadRooms();
 
-    // ฟังก์ชันล้างตัวกรองทั้งหมด
+        if (location.state && location.state.successMessage) {
+            setToastMessage(location.state.successMessage);
+            const timer = setTimeout(() => {
+                setToastMessage('');
+            }, 3500);
+            return () => clearTimeout(timer);
+        }
+    }, [location.state]);
+
     const handleResetFilter = () => {
         const resetData = { room_type: '', floor: '', status: '' };
         setFilter(resetData);
         loadRooms(resetData);
     };
 
-    // ป้ายสถานะห้อง
     const renderStatusBadge = (status) => {
-        if (status === 'available') {
+        if (status === 'ว่าง' || status === 'available') {
             return <span style={{ background: '#dcfce7', color: '#15803d', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}>🟢 ว่าง</span>;
-        } else if (status === 'reserved') {
+        } else if (status === 'จองแล้ว' || status === 'reserved') {
+            return <span style={{ background: '#ffedd5', color: '#c2410c', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}>🟠 จองแล้ว</span>;
+        } else if (status === 'มีผู้เช่า' || status === 'occupied') {
             return <span style={{ background: '#fee2e2', color: '#b91c1c', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}>🔴 มีผู้เช่าแล้ว</span>;
+        } else if (status === 'ปิดปรับปรุง' || status === 'maintenance') {
+            return <span style={{ background: '#fef3c7', color: '#b45309', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}>🟡 ปิดปรับปรุง</span>;
         }
-        return <span style={{ background: '#fef3c7', color: '#b45309', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}>🟡 ปิดปรับปรุง</span>;
+        return null;
     };
 
     return (
-        <div style={{ maxWidth: '1100px', margin: '30px auto 60px', padding: '0 16px', fontFamily: 'sans-serif' }}>
+        <div style={{ maxWidth: '1100px', margin: '30px auto 60px', padding: '0 16px', fontFamily: 'sans-serif', position: 'relative' }}>
+
+            {toastMessage && (
+                <div style={{
+                    position: 'fixed',
+                    top: '85px',
+                    right: '25px',
+                    backgroundColor: '#ffffff',
+                    borderLeft: '6px solid #16a34a',
+                    borderTop: '1px solid #e2e8f0',
+                    borderRight: '1px solid #e2e8f0',
+                    borderBottom: '1px solid #e2e8f0',
+                    padding: '14px 20px',
+                    borderRadius: '8px',
+                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.12)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    zIndex: 99999
+                }}>
+                    <span style={{ fontSize: '20px' }}>✅</span>
+                    <div>
+                        <div style={{ fontSize: '12px', color: '#16a34a', fontWeight: 'bold' }}>ทำรายการสำเร็จ</div>
+                        <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: '600' }}>{toastMessage}</div>
+                    </div>
+                </div>
+            )}
+
             <h2 style={{ fontSize: '26px', color: '#0f172a', marginBottom: '20px' }}>รายการห้องพักทั้งหมด</h2>
-            
-            {/* แถบตัวกรองค้นหา */}
-            <div style={{ 
-                display: 'flex', 
-                flexWrap: 'wrap', 
+
+            <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
                 alignItems: 'center',
-                gap: '12px', 
-                background: '#ffffff', 
-                padding: '16px', 
-                borderRadius: '12px', 
-                marginBottom: '28px', 
-                border: '1px solid #e2e8f0', 
-                boxShadow: '0 2px 4px rgba(0,0,0,0.02)' 
+                gap: '12px',
+                background: '#ffffff',
+                padding: '16px',
+                borderRadius: '12px',
+                marginBottom: '28px',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
             }}>
-                <select 
-                    value={filter.room_type} 
-                    onChange={e => setFilter({...filter, room_type: e.target.value})} 
+                <select
+                    value={filter.room_type}
+                    onChange={e => setFilter({ ...filter, room_type: e.target.value })}
                     style={{ padding: '9px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', background: '#ffffff', color: '#0f172a', fontSize: '14px' }}
                 >
                     <option value="" style={{ color: '#0f172a' }}>ทุกประเภทห้อง</option>
@@ -69,9 +107,9 @@ export default function RoomListScreen() {
                     <option value="air" style={{ color: '#0f172a' }}>ห้องปรับอากาศ (แอร์)</option>
                 </select>
 
-                <select 
-                    value={filter.floor} 
-                    onChange={e => setFilter({...filter, floor: e.target.value})} 
+                <select
+                    value={filter.floor}
+                    onChange={e => setFilter({ ...filter, floor: e.target.value })}
                     style={{ padding: '9px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', background: '#ffffff', color: '#0f172a', fontSize: '14px' }}
                 >
                     <option value="" style={{ color: '#0f172a' }}>ทุกชั้น</option>
@@ -82,47 +120,46 @@ export default function RoomListScreen() {
                     <option value="5" style={{ color: '#0f172a' }}>ชั้น 5</option>
                 </select>
 
-                <select 
-                    value={filter.status} 
-                    onChange={e => setFilter({...filter, status: e.target.value})} 
+                <select
+                    value={filter.status}
+                    onChange={e => setFilter({ ...filter, status: e.target.value })}
                     style={{ padding: '9px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', background: '#ffffff', color: '#0f172a', fontSize: '14px' }}
                 >
                     <option value="" style={{ color: '#0f172a' }}>ทุกสถานะ</option>
-                    <option value="available" style={{ color: '#0f172a' }}>🟢 ว่าง</option>
-                    <option value="reserved" style={{ color: '#0f172a' }}>🔴 มีผู้เช่าแล้ว</option>
-                    <option value="maintenance" style={{ color: '#0f172a' }}>🟡 ปิดปรับปรุง</option>
+                    <option value="ว่าง" style={{ color: '#0f172a' }}>🟢 ว่าง</option>
+                    <option value="จองแล้ว" style={{ color: '#0f172a' }}>🟠 จองแล้ว</option>
+                    <option value="มีผู้เช่า" style={{ color: '#0f172a' }}>🔴 มีผู้เช่าแล้ว</option>
+                    <option value="ปิดปรับปรุง" style={{ color: '#0f172a' }}>🟡 ปิดปรับปรุง</option>
                 </select>
 
-                {/* ปุ่มค้นหา */}
-                <button 
-                    onClick={() => loadRooms(filter)} 
-                    style={{ 
-                        backgroundColor: '#15803d', 
-                        color: '#ffffff', 
-                        border: 'none', 
-                        padding: '9px 24px', 
-                        borderRadius: '8px', 
-                        cursor: 'pointer', 
-                        fontWeight: 'bold', 
-                        fontSize: '14px' 
+                <button
+                    onClick={() => loadRooms(filter)}
+                    style={{
+                        backgroundColor: '#15803d',
+                        color: '#ffffff',
+                        border: 'none',
+                        padding: '9px 24px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        fontSize: '14px'
                     }}
                 >
                     ค้นหา
                 </button>
 
-                {/* ปุ่มล้างตัวกรอง หน้าตาเหมือนปุ่มค้นหาเป๊ะ */}
                 {(filter.room_type || filter.floor || filter.status) && (
-                    <button 
-                        onClick={handleResetFilter} 
-                        style={{ 
-                            backgroundColor: '#15803d', 
-                            color: '#ffffff', 
-                            border: 'none', 
-                            padding: '9px 24px', 
-                            borderRadius: '8px', 
-                            cursor: 'pointer', 
-                            fontWeight: 'bold', 
-                            fontSize: '14px' 
+                    <button
+                        onClick={handleResetFilter}
+                        style={{
+                            backgroundColor: '#15803d',
+                            color: '#ffffff',
+                            border: 'none',
+                            padding: '9px 24px',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            fontSize: '14px'
                         }}
                     >
                         ล้างตัวกรอง
@@ -130,13 +167,11 @@ export default function RoomListScreen() {
                 )}
             </div>
 
-            {/* แสดงสถานะกำลังโหลด */}
             {loading ? (
                 <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
                     <p style={{ fontSize: '18px' }}>กำลังค้นหาข้อมูลห้องพัก...</p>
                 </div>
             ) : rooms.length === 0 ? (
-                /* กล่องแจ้งเตือนเมื่อไม่พบข้อมูล (Empty State) */
                 <div style={{
                     textAlign: 'center',
                     padding: '60px 20px',
@@ -149,9 +184,9 @@ export default function RoomListScreen() {
                     <div style={{ fontSize: '54px', marginBottom: '14px' }}>🔍</div>
                     <h3 style={{ fontSize: '20px', color: '#1e293b', margin: '0 0 8px 0' }}>ไม่พบข้อมูลห้องพักที่ตรงกับเงื่อนไข</h3>
                     <p style={{ color: '#64748b', fontSize: '14px', maxWidth: '420px', margin: '0 auto 20px', lineHeight: '1.6' }}>
-                        ไม่มีห้องพักตามเงื่อนไขประเภทห้อง ชั้น หรือสถานะที่คุณเลือกไว้ในขณะนี้ ลองเลือกเงื่อนไขใหม่อีกครั้ง
+                        ไม่มีห้องพักตามเงื่อนไขที่คุณเลือกไว้ ลองเลือกเงื่อนไขใหม่อีกครั้ง
                     </p>
-                    <button 
+                    <button
                         onClick={handleResetFilter}
                         style={{
                             backgroundColor: '#15803d',
@@ -168,17 +203,16 @@ export default function RoomListScreen() {
                     </button>
                 </div>
             ) : (
-                /* รายการการ์ดห้องพัก */
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
                     {rooms.map(r => (
                         <div key={r.id} style={{ background: '#fff', borderRadius: '14px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                             <div>
-                                <img 
+                                <img
                                     src={
-                                        r.image_url 
-                                            ? r.image_url.split(',')[0].trim() 
+                                        r.image_url
+                                            ? r.image_url.split(',')[0].trim()
                                             : (r.room_type === 'air' ? 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c?w=500' : 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=500')
-                                    } 
+                                    }
                                     alt={`ห้อง ${r.room_number}`}
                                     style={{ width: '100%', height: '180px', objectFit: 'cover' }}
                                     onError={(e) => {
@@ -196,12 +230,16 @@ export default function RoomListScreen() {
                                     <p style={{ margin: '8px 0', fontSize: '13px', color: '#475569', lineHeight: '1.5', minHeight: '40px' }}>
                                         {r.details || 'ไม่มีรายละเอียดเพิ่มเติม'}
                                     </p>
-                                    
+
                                     <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: '6px', fontSize: '12px', marginTop: '10px' }}>
-                                        {r.status === 'available' ? (
+                                        {(r.status === 'ว่าง' || r.status === 'available') ? (
                                             <span style={{ color: '#16a34a', fontWeight: '600' }}>✨ พร้อมเข้าอยู่ได้ทันที</span>
+                                        ) : (r.status === 'ปิดปรับปรุง' || r.status === 'maintenance') ? (
+                                            <span style={{ color: '#b45309', fontWeight: '600' }}>🔧 อยู่ระหว่างปิดปรับปรุงชั่วคราว</span>
+                                        ) : (r.status === 'จองแล้ว' || r.status === 'reserved') ? (
+                                            <span style={{ color: '#c2410c', fontWeight: '600' }}>📝 ผู้จอง: {r.tenant_name || 'ติดจอง'}</span>
                                         ) : (
-                                            <span style={{ color: '#dc2626', fontWeight: '600' }}>👤 ผู้พัก: {r.tenant_name || 'มีผู้เช่าแล้ว'}</span>
+                                            <span style={{ color: '#dc2626', fontWeight: '600' }}>👤 ผู้เช่า: {r.tenant_name || 'มีผู้เช่าแล้ว'}</span>
                                         )}
                                     </div>
                                 </div>
